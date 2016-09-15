@@ -1,0 +1,152 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<SchemaFile xmlns="" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<dataCompositionSchema xmlns="http://v8.1c.ru/8.1/data-composition-system/schema">
+		<dataSource>
+			<name>ИсточникДанныхЦеныНоменклатуры</name>
+			<dataSourceType>Local</dataSourceType>
+		</dataSource>
+		<dataSet xsi:type="DataSetQuery">
+			<name>ЦеныНоменклатуры</name>
+			<field xsi:type="DataSetFieldField">
+				<dataPath>Номенклатура</dataPath>
+				<field>Номенклатура</field>
+				<title xmlns:d5p1="http://v8.1c.ru/8.1/data/core" xsi:type="d5p1:LocalStringType">
+					<d5p1:item>
+						<d5p1:lang>ru</d5p1:lang>
+						<d5p1:content>Номенклатура</d5p1:content>
+					</d5p1:item>
+				</title>
+			</field>
+			<field xsi:type="DataSetFieldField">
+				<dataPath>Цена</dataPath>
+				<field>Цена</field>
+				<title xmlns:d5p1="http://v8.1c.ru/8.1/data/core" xsi:type="d5p1:LocalStringType">
+					<d5p1:item>
+						<d5p1:lang>ru</d5p1:lang>
+						<d5p1:content>Цена</d5p1:content>
+					</d5p1:item>
+				</title>
+				<valueType>
+					<Type xmlns="http://v8.1c.ru/8.1/data/core">xs:decimal</Type>
+					<NumberQualifiers xmlns="http://v8.1c.ru/8.1/data/core">
+						<Digits>0</Digits>
+						<FractionDigits>0</FractionDigits>
+						<AllowedSign>Any</AllowedSign>
+					</NumberQualifiers>
+				</valueType>
+			</field>
+			<field xsi:type="DataSetFieldField">
+				<dataPath>Характеристика</dataPath>
+				<field>Характеристика</field>
+				<title xmlns:d5p1="http://v8.1c.ru/8.1/data/core" xsi:type="d5p1:LocalStringType">
+					<d5p1:item>
+						<d5p1:lang>ru</d5p1:lang>
+						<d5p1:content>Характеристика</d5p1:content>
+					</d5p1:item>
+				</title>
+			</field>
+			<field xsi:type="DataSetFieldField">
+				<dataPath>Валюта</dataPath>
+				<field>Валюта</field>
+				<title xmlns:d5p1="http://v8.1c.ru/8.1/data/core" xsi:type="d5p1:LocalStringType">
+					<d5p1:item>
+						<d5p1:lang>ru</d5p1:lang>
+						<d5p1:content>Валюта</d5p1:content>
+					</d5p1:item>
+				</title>
+			</field>
+			<dataSource>ИсточникДанныхЦеныНоменклатуры</dataSource>
+			<query>ВЫБРАТЬ
+	Номенклатура.Ссылка КАК Номенклатура,
+	САП_НормативнаяСебестоимостьСрезПоследних.НормативныеЗатраты * Номенклатура.Объем КАК Цена
+ПОМЕСТИТЬ ВТ_ПоНоменклатуре
+ИЗ
+	Справочник.Номенклатура КАК Номенклатура
+		ЛЕВОЕ СОЕДИНЕНИЕ РегистрСведений.САП_НормативнаяСебестоимость.СрезПоследних КАК САП_НормативнаяСебестоимостьСрезПоследних
+		ПО Номенклатура.Ссылка = САП_НормативнаяСебестоимостьСрезПоследних.ГруппаПродукции
+;
+
+////////////////////////////////////////////////////////////////////////////////
+ВЫБРАТЬ
+	Номенклатура.Ссылка КАК Номенклатура,
+	Номенклатура.Объем * САП_НормативнаяСебестоимостьСрезПоследних.НормативныеЗатраты КАК Цена
+ПОМЕСТИТЬ ВТ_ПоЦеновойГруппе
+ИЗ
+	Справочник.ЦеновыеГруппы КАК ЦеновыеГруппы
+		ПОЛНОЕ СОЕДИНЕНИЕ РегистрСведений.САП_НормативнаяСебестоимость.СрезПоследних КАК САП_НормативнаяСебестоимостьСрезПоследних
+		ПО ЦеновыеГруппы.Ссылка = САП_НормативнаяСебестоимостьСрезПоследних.ГруппаПродукции
+		ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Номенклатура КАК Номенклатура
+		ПО (Номенклатура.ЦеноваяГруппа = ЦеновыеГруппы.Ссылка)
+;
+
+////////////////////////////////////////////////////////////////////////////////
+ВЫБРАТЬ
+	ВТ_ПоНоменклатуре.Номенклатура,
+	ЕСТЬNULL(ВТ_ПоНоменклатуре.Цена, ВТ_ПоЦеновойГруппе.Цена) КАК Цена
+ПОМЕСТИТЬ ВТ_Итог
+ИЗ
+	ВТ_ПоНоменклатуре КАК ВТ_ПоНоменклатуре
+		ЛЕВОЕ СОЕДИНЕНИЕ ВТ_ПоЦеновойГруппе КАК ВТ_ПоЦеновойГруппе
+		ПО ВТ_ПоНоменклатуре.Номенклатура = ВТ_ПоЦеновойГруппе.Номенклатура
+
+СГРУППИРОВАТЬ ПО
+	ВТ_ПоНоменклатуре.Номенклатура,
+	ЕСТЬNULL(ВТ_ПоНоменклатуре.Цена, ВТ_ПоЦеновойГруппе.Цена)
+;
+
+////////////////////////////////////////////////////////////////////////////////
+ВЫБРАТЬ
+	ВТ_Итог.Номенклатура,
+	ВТ_Итог.Цена,
+	ХарактеристикиНоменклатуры.Ссылка КАК Характеристика,
+	ВалютаРегламентированногоУчета.Значение КАК Валюта
+ИЗ
+	ВТ_Итог КАК ВТ_Итог
+		ЛЕВОЕ СОЕДИНЕНИЕ Справочник.ХарактеристикиНоменклатуры КАК ХарактеристикиНоменклатуры
+		ПО ВТ_Итог.Номенклатура = ХарактеристикиНоменклатуры.Владелец,
+	Константа.ВалютаРегламентированногоУчета КАК ВалютаРегламентированногоУчета</query>
+		</dataSet>
+		<parameter>
+			<name>Период</name>
+			<title xmlns:d4p1="http://v8.1c.ru/8.1/data/core" xsi:type="d4p1:LocalStringType">
+				<d4p1:item>
+					<d4p1:lang>ru</d4p1:lang>
+					<d4p1:content>Период</d4p1:content>
+				</d4p1:item>
+			</title>
+			<valueType>
+				<Type xmlns="http://v8.1c.ru/8.1/data/core">xs:dateTime</Type>
+				<DateQualifiers xmlns="http://v8.1c.ru/8.1/data/core">
+					<DateFractions>DateTime</DateFractions>
+				</DateQualifiers>
+			</valueType>
+			<value xsi:type="xs:dateTime">0001-01-01T00:00:00</value>
+			<useRestriction>false</useRestriction>
+		</parameter>
+		<settingsVariant>
+			<name xmlns="http://v8.1c.ru/8.1/data-composition-system/settings">Основной</name>
+			<presentation xmlns="http://v8.1c.ru/8.1/data-composition-system/settings" xsi:type="xs:string">Основной</presentation>
+		</settingsVariant>
+	</dataCompositionSchema>
+</SchemaFile>﻿<?xml version="1.0" encoding="UTF-8"?>
+<Settings xmlns="http://v8.1c.ru/8.1/data-composition-system/settings" xmlns:dcscor="http://v8.1c.ru/8.1/data-composition-system/core" xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<selection>
+		<item xsi:type="SelectedItemField">
+			<field>Номенклатура</field>
+		</item>
+		<item xsi:type="SelectedItemField">
+			<field>Цена</field>
+		</item>
+	</selection>
+	<item xsi:type="StructureItemGroup">
+		<order>
+			<item xsi:type="OrderItemAuto"/>
+		</order>
+		<selection>
+			<item xsi:type="SelectedItemAuto"/>
+		</selection>
+	</item>
+</Settings>﻿<?xml version="1.0" encoding="UTF-8"?>
+<SchemaFile xmlns="" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<dataCompositionSchema xmlns="http://v8.1c.ru/8.1/data-composition-system/schema"/>
+</SchemaFile>
